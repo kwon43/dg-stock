@@ -99,4 +99,80 @@ st.caption("위험대비수익이 높을수록 '위험 대비 효율이 좋았�
 # 위험대비수익 기준 정렬
 result_df = result_df.sort_values("위험대비수익", ascending=False).reset_index(drop=True)
 
-# 표에
+# 표에 색상 강조
+st.dataframe(
+    result_df.style.background_gradient(
+        subset=["위험대비수익"], cmap="RdYlGn"
+    ).format({
+        "수익률(%)": "{:.2f}",
+        "변동성(%)": "{:.2f}",
+        "위험대비수익": "{:.3f}"
+    }),
+    use_container_width=True,
+    hide_index=True
+)
+
+st.divider()
+
+# ===== 2. 수익률 vs 위험 산점도 =====
+st.subheader("🎯 수익률 vs 위험(변동성) 지도")
+st.caption("오른쪽 아래(고수익·저위험)일수록 효율이 좋았던 영역입니다.")
+
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    x=result_df["변동성(%)"],
+    y=result_df["수익률(%)"],
+    mode="markers+text",
+    text=result_df["종목"],
+    textposition="top center",
+    marker=dict(
+        size=14,
+        color=result_df["위험대비수익"],
+        colorscale="RdYlGn",
+        showscale=True,
+        colorbar=dict(title="위험대비<br>수익")
+    )
+))
+fig.update_layout(
+    xaxis_title="위험 (변동성 %)",
+    yaxis_title="수익률 (%)",
+    height=550,
+    template="plotly_white"
+)
+fig.add_hline(y=0, line_dash="dash", line_color="gray")
+st.plotly_chart(fig, use_container_width=True)
+
+st.divider()
+
+# ===== 3. 데이터 기반 참고 의견 =====
+st.subheader("💡 데이터 기반 참고 정보")
+
+best = result_df.iloc[0]
+worst = result_df.iloc[-1]
+up_trend = result_df[result_df["추세"] == "상승추세"]["종목"].tolist()
+
+col1, col2 = st.columns(2)
+with col1:
+    st.success(f"""
+    **📈 위험 대비 효율이 가장 좋았던 종목**
+    → **{best['종목']}**
+    (수익률 {best['수익률(%)']}%, 변동성 {best['변동성(%)']}%)
+    """)
+with col2:
+    st.warning(f"""
+    **📉 위험 대비 효율이 낮았던 종목**
+    → **{worst['종목']}**
+    (수익률 {worst['수익률(%)']}%, 변동성 {worst['변동성(%)']}%)
+    """)
+
+if up_trend:
+    st.info(f"**현재 상승추세(20일선 위)인 종목:** {', '.join(up_trend)}")
+
+st.error("""
+⚠️ **꼭 기억하세요!**
+위 정보는 **과거 데이터**일 뿐, 미래 수익을 보장하지 않습니다.
+과거에 좋았던 종목이 앞으로도 좋다는 보장은 없습니다.
+이 자료는 **학습용**이며, 실제 투자 판단과 책임은 본인에게 있습니다.
+""")
+
+st.caption("데이터 출처: Yahoo Finance")
